@@ -54,4 +54,15 @@ Abrir [http://localhost:4200](http://localhost:4200).
 - [x] Ajuste automático de resolución y DPI Awareness.
 
 ---
-*Desarrollado como parte del proyecto 017-REMOTEDESTOP.*
+*Nota Final-> Hay cosas que se deben mejorar pero para una primera aproximación es un buen avance*
+*1- Se debe aumentar la resolución y el tamaño de la ventana que se captura *
+*2- Aunque se controla ratón y teclado en las pruebas, solo llego a tener la visualizacion*
+*3- No he podido llegar a testear el MultiMonitor debido a que solo dispongo de uno*
+*4- En cada conexion al abrir, el codigo obtenido del Id Sesion para conectarse es diferente*
+*5- La grabacion es correcta y se descarga una vez finalizada la conexion o detenida la grabación*
+
+### 5. Capturas de la aplicación
+<img width="799" height="198" alt="servidor" src="https://github.com/user-attachments/assets/59d81c54-afc5-4bc1-ab41-11a85c7d40e8" />
+<img width="1912" height="1776" alt="RemotePro" src="https://github.com/user-attachments/assets/567a6fca-1ca1-48b8-ad8d-2dc6f398ac2c" />
+
+
