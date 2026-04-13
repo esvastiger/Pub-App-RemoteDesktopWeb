@@ -54,12 +54,12 @@ Abrir [http://localhost:4200](http://localhost:4200).
 - [x] Ajuste automático de resolución y DPI Awareness.
 
 ---
-*Nota Final-> Hay cosas que se deben mejorar pero para una primera aproximación es un buen avance*
-*1- Se debe aumentar la resolución y el tamaño de la ventana que se captura *
-*2- Aunque se controla ratón y teclado en las pruebas, solo llego a tener la visualizacion*
-*3- No he podido llegar a testear el MultiMonitor debido a que solo dispongo de uno*
-*4- En cada conexion al abrir, el codigo obtenido del Id Sesion para conectarse es diferente*
-*5- La grabacion es correcta y se descarga una vez finalizada la conexion o detenida la grabación*
+### Nota Final-> Hay cosas que se deben mejorar pero para una primera aproximación es un buen avance.
+*   1- **Problema** Se debe aumentar la **resolución y el tamaño** de la ventana que se captura
+*   2- **Problema** Solo llego a tener la visualizacion, por algun motivo **NO** reconoce los clics del ratón y teclado en las pruebas, 
+*   3- **Problema** -**No he podido llegar a testear el Multi-Monitor** debido a que solo dispongo de 1
+*   4- En cada conexion al abrir, el codigo obtenido del Id Sesion para conectarse es diferente
+*   5- La grabacion es correcta y se descarga una vez **finalizada la conexion o detenida la grabación**
 
 ### 5. Capturas de la aplicación
 <img width="799" height="198" alt="servidor" src="https://github.com/user-attachments/assets/59d81c54-afc5-4bc1-ab41-11a85c7d40e8" />
