@@ -51,11 +51,13 @@ io.on('connection', (socket) => {
 
     // Intercambio de llaves criptográficas (E2EE)
     socket.on('key-exchange-offer', (data) => {
-        socket.broadcast.emit('key-exchange-offer', data);
+        if (data.to) io.to(data.to).emit('key-exchange-offer', data);
+        else socket.broadcast.emit('key-exchange-offer', data);
     });
 
     socket.on('key-exchange-answer', (data) => {
-        socket.broadcast.emit('key-exchange-answer', data);
+        if (data.to) io.to(data.to).emit('key-exchange-answer', data);
+        else socket.broadcast.emit('key-exchange-answer', data);
     });
 
     // Reenvío de datos de pantalla (Video Stream)
@@ -65,7 +67,9 @@ io.on('connection', (socket) => {
 
     // Reenvío de comandos de control (Mouse/Keyboard)
     socket.on('remote-command', (cmd) => {
-        socket.broadcast.emit('remote-command', cmd);
+        console.log(`[Server] Reenviando comando de ${socket.id}`);
+        // FUERZA BRUTA: Enviar a todos los sockets conectados al servidor
+        io.emit('remote-command', cmd);
     });
 
     socket.on('disconnect', () => {

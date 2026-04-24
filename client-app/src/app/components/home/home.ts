@@ -141,13 +141,14 @@ import { io, Socket } from 'socket.io-client';
     }
     
     canvas { 
-      max-width: 100%; 
-      max-height: 100%; 
-      width: auto;
-      height: auto;
+      width: 100%; 
+      height: 100%; 
       object-fit: contain; 
       cursor: crosshair; 
       display: block; 
+      /* Cambiamos pixelated por optimización de contraste/legibilidad */
+      image-rendering: auto;
+      filter: contrast(1.05) brightness(1.02); /* Un ligero toque para resaltar el texto */
     }
 
     .card { background: white; padding: 30px; border-radius: 12px; color: #333; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 100%; max-width: 450px; text-align: center; }
@@ -177,7 +178,12 @@ export class HomeComponent implements OnInit, OnDestroy {
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
 
-  private keyMap: { [key: string]: number } = { 'enter': 0x0D, 'escape': 0x1B, ' ': 0x20, 'arrowleft': 0x25, 'arrowup': 0x26, 'arrowright': 0x27, 'arrowdown': 0x28 };
+  private keyMap: { [key: string]: number } = { 
+    'enter': 0x0D, 'escape': 0x1B, ' ': 0x20, 'backspace': 0x08, 'tab': 0x09,
+    'arrowleft': 0x25, 'arrowup': 0x26, 'arrowright': 0x27, 'arrowdown': 0x28,
+    'delete': 0x2E, 'home': 0x24, 'end': 0x23, 'pageup': 0x21, 'pagedown': 0x22,
+    'control': 0x11, 'shift': 0x10, 'alt': 0x12, 'meta': 0x5B
+  };
 
   constructor(private cdr: ChangeDetectorRef) {}
 
@@ -192,9 +198,17 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.socket.on('host-meta', (m: any) => { this.hostWidth = m.width; this.hostHeight = m.height; this.monitorCount = m.monitorCount; this.updateCanvasSize(); });
     this.socket.on('screen-update', (b64: string) => { if (!this.isP2P) this.drawFrame(b64); });
     this.socket.on('key-exchange-offer', async (d: any) => {
-      const pub = await crypto.subtle.importKey("raw", d.publicKey, { name: "ECDH", namedCurve: "P-256" }, true, []);
-      this.cryptoKey = await crypto.subtle.deriveKey({ name: "ECDH", public: pub }, this.keyPair.privateKey, { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]);
-      this.socket.emit('key-exchange-answer', { publicKey: await crypto.subtle.exportKey("raw", this.keyPair.publicKey) });
+      console.log("[Crypto] Recibida oferta de llave del Host. Derivando...");
+      try {
+        const pub = await crypto.subtle.importKey("raw", d.publicKey, { name: "ECDH", namedCurve: "P-256" }, true, []);
+        this.cryptoKey = await crypto.subtle.deriveKey({ name: "ECDH", public: pub }, this.keyPair.privateKey, { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]);
+        
+        const myPub = await crypto.subtle.exportKey("raw", this.keyPair.publicKey);
+        this.socket.emit('key-exchange-answer', { publicKey: myPub, to: this.targetId });
+        console.log("[Crypto] ¡Sistema de cifrado activado y listo!");
+      } catch (e) {
+        console.error("[Crypto] Error en intercambio:", e);
+      }
     });
     this.socket.on('signal', async (d: any) => {
       if (d.signalData.sdp) {
@@ -215,6 +229,8 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   private drawFrame(data: any) {
+    if (!this.canvasRef || !this.canvasRef.nativeElement) return;
+    
     const canvas = this.canvasRef.nativeElement;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -222,9 +238,17 @@ export class HomeComponent implements OnInit, OnDestroy {
     const img = new Image();
     img.onload = () => {
       this.isSessionActive = true;
-      // Dibujamos con suavizado activado
+      
+      // Sincronización estricta de resolución interna
+      if (canvas.width !== img.width || canvas.height !== img.height) {
+        canvas.width = img.width;
+        canvas.height = img.height;
+      }
+
+      // Configuración para Máxima Legibilidad de Texto
       ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
+      ctx.imageSmoothingQuality = 'high'; // Usa algoritmos superiores del navegador
+      
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     };
@@ -245,6 +269,11 @@ export class HomeComponent implements OnInit, OnDestroy {
   async onConnect() { 
     if (!this.targetId) return;
     this.isSessionActive = true;
+    
+    // CRÍTICO: Avisar al servidor para que el Host sepa que hemos entrado
+    // Esto disparará el 'viewer-connected' en el Bridge y el intercambio de llaves.
+    this.socket.emit('join-session', this.targetId);
+
     this.setupWebRTC(); 
     const offer = await this.peerConnection?.createOffer(); 
     if (offer) { 
@@ -287,21 +316,77 @@ export class HomeComponent implements OnInit, OnDestroy {
   stopRecording() { this.mediaRecorder?.stop(); this.isRecording = false; }
 
   async emitEncrypted(cmd: any) {
-    if (!this.cryptoKey) return;
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, this.cryptoKey, new TextEncoder().encode(JSON.stringify(cmd)));
-    const payload = JSON.stringify({ iv: btoa(String.fromCharCode(...iv)), data: btoa(String.fromCharCode(...new Uint8Array(ct))) });
-    if (this.commandChannel?.readyState === 'open') this.commandChannel.send(payload);
-    else this.socket.emit('remote-command', JSON.parse(payload));
+    if (!this.cryptoKey) return; // No enviar nada si no hay cifrado activo
+    
+    try {
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, this.cryptoKey, new TextEncoder().encode(JSON.stringify(cmd)));
+      
+      const payload = { 
+        iv: btoa(String.fromCharCode(...iv)), 
+        data: btoa(String.fromCharCode(...new Uint8Array(ct))),
+        to: this.targetId
+      };
+
+      if (this.commandChannel?.readyState === 'open') {
+        this.commandChannel.send(JSON.stringify(payload));
+      } else {
+        this.socket.emit('remote-command', payload);
+      }
+    } catch (e) {
+      console.error("[Crypto] Error al cifrar:", e);
+    }
   }
 
   onMouseMove(e: MouseEvent) {
+    if (!this.isSessionActive) return;
     const r = this.canvasRef.nativeElement.getBoundingClientRect();
-    this.emitEncrypted({ type: 'MOVE', x: Math.round(((e.clientX - r.left) / r.width) * this.hostWidth), y: Math.round(((e.clientY - r.top) / r.height) * this.hostHeight) });
+    const x = Math.round(((e.clientX - r.left) / r.width) * this.hostWidth);
+    const y = Math.round(((e.clientY - r.top) / r.height) * this.hostHeight);
+    console.log(`[Mouse] Move: ${x}, ${y}`);
+    this.emitEncrypted({ type: 'MOVE', x, y });
   }
-  onMouseDown(e: MouseEvent) { this.emitEncrypted({ type: 'CLICK', button: e.button === 0 ? 'LEFT' : 'RIGHT', action: 'DOWN' }); }
-  onMouseUp(e: MouseEvent) { this.emitEncrypted({ type: 'CLICK', button: e.button === 0 ? 'LEFT' : 'RIGHT', action: 'UP' }); }
+  onMouseDown(e: MouseEvent) { 
+    if (!this.isSessionActive) return;
+    const btn = e.button === 0 ? 'LEFT' : (e.button === 2 ? 'RIGHT' : null);
+    if (btn) {
+      console.log(`[Mouse] Click Down: ${btn}`);
+      this.emitEncrypted({ type: 'CLICK', button: btn, action: 'DOWN' }); 
+    }
+  }
+  onMouseUp(e: MouseEvent) { 
+    if (!this.isSessionActive) return;
+    const btn = e.button === 0 ? 'LEFT' : (e.button === 2 ? 'RIGHT' : null);
+    if (btn) {
+      console.log(`[Mouse] Click Up: ${btn}`);
+      this.emitEncrypted({ type: 'CLICK', button: btn, action: 'UP' }); 
+    }
+  }
 
   @HostListener('window:keydown', ['$event'])
-  onKeyDown(e: KeyboardEvent) { if (this.isSessionActive && this.keyMap[e.key.toLowerCase()]) this.emitEncrypted({ type: 'KEY', vk: this.keyMap[e.key.toLowerCase()], action: 'DOWN' }); }
+  onKeyDown(e: KeyboardEvent) { 
+    if (!this.isSessionActive) return;
+    console.log(`[Key] Down: ${e.key}`);
+    let vk = 0;
+    const key = e.key.toLowerCase();
+    if (this.keyMap[key]) vk = this.keyMap[key];
+    else if (key.length === 1) vk = key.toUpperCase().charCodeAt(0);
+
+    if (vk > 0) {
+      e.preventDefault();
+      this.emitEncrypted({ type: 'KEY', vk: vk, action: 'DOWN' });
+    }
+  }
+
+  @HostListener('window:keyup', ['$event'])
+  onKeyUp(e: KeyboardEvent) {
+    if (!this.isSessionActive) return;
+    let vk = 0;
+    const key = e.key.toLowerCase();
+    if (this.keyMap[key]) vk = this.keyMap[key];
+    else if (key.length === 1) vk = key.toUpperCase().charCodeAt(0);
+    if (vk > 0) {
+      this.emitEncrypted({ type: 'KEY', vk: vk, action: 'UP' });
+    }
+  }
 }

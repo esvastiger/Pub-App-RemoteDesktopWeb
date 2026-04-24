@@ -53,12 +53,15 @@ void CommandListener() {
             int x, y; if (sscanf_s(line, "MOVE %d %d", &x, &y) == 2) SimulateMouseMove(x, y, currentWidth, currentHeight);
         } else if (sLine.find("CLICK") == 0) {
             char t[16], a[16]; 
-            if (sscanf_s(line, "CLICK %s %s", t, (unsigned int)sizeof(t), a, (unsigned int)sizeof(a)) == 2) 
+            // Usar un formato más seguro para strings en sscanf_s
+            if (sscanf_s(line, "CLICK %15s %15s", t, (unsigned int)sizeof(t), a, (unsigned int)sizeof(a)) == 2) {
                 SimulateMouseClick(std::string(t) == "LEFT", std::string(a) == "DOWN");
+            }
         } else if (sLine.find("KEY") == 0) {
             int vk; char a[16]; 
-            if (sscanf_s(line, "KEY %d %s", &vk, a, (unsigned int)sizeof(a)) == 2) 
+            if (sscanf_s(line, "KEY %d %15s", &vk, a, (unsigned int)sizeof(a)) == 2) {
                 SimulateKeyboardKey((WORD)vk, std::string(a) == "DOWN");
+            }
         } else if (sLine.find("SWITCH") == 0) {
             int target; if (sscanf_s(line, "SWITCH %d", &target) == 1) { activeMonitor = target; restartCapture = true; }
         }

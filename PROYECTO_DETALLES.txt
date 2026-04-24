@@ -45,11 +45,24 @@
 4. **Angular Viewer:** Ejecutar `npm start`. Verifica que el badge cambie a "UDP P2P" al conectar.
 5. **Logs de Consola (F12):** En el navegador, verás el handshake criptográfico y la resolución detectada.
 
-## FASE 4: VERIFICACIÓN DE ÉXITO
-1. **Latencia:** Reducida a niveles imperceptibles (<100ms) gracias a UDP y procesamiento binario.
-2. **Redes Móviles (4G/LTE):** Totalmente funcional mediante servidores STUN y optimización de ancho de banda.
-3. **Multi-Monitor:** El motor ya detecta y reporta todos los monitores; el control es preciso en el monitor principal.
-4. **Seguridad:** Los comandos viajan cifrados y autenticados; el servidor de señalización no puede leer el tráfico.
+---
+## ACTUALIZACIÓN [2026-04-23] - MEJORAS DE DEFINICIÓN Y SEGURIDAD E2EE
+1. **Resolución Dinámica:** Se implementó la sincronización estricta del buffer interno del Canvas con el frame recibido, eliminando el pixelado por escalado del navegador.
+2. **Nitidez Adaptativa:** Uso de `imageSmoothingQuality: 'high'` y filtros de contraste CSS para mejorar la legibilidad de textos pequeños.
+3. **Seguridad End-to-End (E2EE):**
+    - Implementación de intercambio de llaves **ECDH (Elliptic Curve Diffie-Hellman)** sobre P-256.
+    - Cifrado de comandos mediante **AES-256-GCM** con vectores de inicialización (IV) únicos por comando.
+    - Validación de autenticidad mediante Auth Tags para prevenir la manipulación de eventos de control.
+4. **Optimización del Host Bridge:** 
+    - Añadido sistema de logs detallados para depuración de red y descifrado.
+    - Implementación de redundancia de comandos (DataChannel + Socket.io fallback).
+5. **Control de Inyección Robusto:**
+    - Mejora en el parsing de comandos en el motor C++ para evitar bloqueos por strings malformados.
+    - Soporte extendido para eventos de teclado (KeyDown/KeyUp) y mapeo de Scan Codes.
+
+---
+**NOTA TÉCNICA FINAL:** Para máxima nitidez, se recomienda que el Host tenga el escalado de Windows al 100% o recompilar el motor con la última configuración de DPI Awareness Per Monitor v2 incluida en el código fuente.
+
 
 /**/
   Para poder verlo en acción, puedes ejecutar los siguientes comandos en dos terminales separadas de tu equipo:

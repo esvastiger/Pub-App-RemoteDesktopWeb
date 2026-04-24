@@ -1,7 +1,7 @@
 ﻿  main.cpp
   Generando código
-  50 of 157 functions (31.8%) were compiled, the rest were copied from previous compilation.
+  23 of 157 functions (14.6%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
-    8 functions had inline decision re-evaluated but remain unchanged
+    0 functions had inline decision re-evaluated but remain unchanged
   Generación de código finalizada
-  RemoteEngine.vcxproj -> C:\Users\viela\Desktop\CODIGO\017-REMOTEDESTOP\host-engine\RemoteEngine\x64\Release\RemoteEngine.exe
+  RemoteEngine.vcxproj -> C:\Users\viela\Desktop\CODIGO\017-A-REMOTEDESTOP\Pub-App-RemoteDesktopWeb-main\host-engine\RemoteEngine\x64\Release\RemoteEngine.exe
